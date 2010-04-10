@@ -8,11 +8,10 @@ var hostip = http.createClient(80, "api.hostip.info");
 
 http.createServer(function (request, response) {
   response.sendHeader('Content-Type: image/gif');
-  var ip = request.connection.remoteAddress;
-  // response.write(ip);
-  log(ip, request.headers['user-agent']);
+  if (request.url === '/s.gif')
+    log(request.connection.remoteAddress, request.headers['user-agent']);
   response.close();
-}).listen(4080);
+}).listen(8080);
 
 function log(ip, browser) {
   var req = hostip.request("GET", "/get_html.php?ip=" + ip, {host: "api.hostip.info"});
@@ -27,15 +26,11 @@ function log(ip, browser) {
         var country = /Country\:\s(.*)\((\w\w)\)/g.exec(cc[0]);
         var city = /City\:\s(.*)/g.exec(cc[1]);
         var obj = { date: new Date(), ip: ip, country: country[1].trim(), code: country[2].trim(), city: city[1].trim(), browser: browser }
-        save(obj);
+        fs.readFile(file, function(err, data) {
+          if (!err) fs.writeFile(file, JSON.stringify(obj) + "\n" + data);
+        });
       }
     });
   });
   req.close();
-}
-
-function save(obj) {
-  fs.readFile(file, function(err, data) {
-    if (!err) fs.writeFile(file, JSON.stringify(obj) + "\n" + data);
-  });
 }
