@@ -9,12 +9,12 @@ var host = "ipinfodb.com",
 
 http.createServer(function (request, response) {
   response.sendHeader('Content-Type: image/gif');
-  if (request.url === '/s.gif')
-    log(request.connection.remoteAddress, request.headers['user-agent']);
+  var origin = /\/(.*)\.gif/.exec(request.url);
+  if (origin) log(origin[1], request.connection.remoteAddress, request.headers['user-agent']);
   response.close();
 }).listen(8080);
 
-function log(ip, browser) {
+function log(origin, ip, browser) {
   var req = server.request("GET", "/ip_query.php?ip=" + ip + "&timezone=false", {host: host});
   req.addListener('response', function (resp) {
     var buffer = "";
@@ -25,7 +25,7 @@ function log(ip, browser) {
       if (resp.statusCode < 300) {
 		var country = /<CountryCode>(\w\w)<\/CountryCode>/.exec(buffer),
 			city = /<City>(.*)<\/City>/.exec(buffer),
-			obj = { date: new Date(), ip: ip, country: country ? country[1] : "XX", city: city ? city[1] : "Unknown", browser: browser };
+			obj = { origin: origin, date: new Date(), ip: ip, country: country ? country[1] : "XX", city: city ? city[1] : "Unknown", browser: browser };
 		fs.open(file, 'a+', 0666, function(err, fd) {
 			if (!err) fs.write(fd, JSON.stringify(obj) + '\n', null, 'utf8');
 		})
