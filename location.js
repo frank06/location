@@ -4,7 +4,8 @@ var sys = require('sys'),
   file = __dirname + '/' + "visits";
 
 sys.exec("touch " + file);
-var hostip = http.createClient(80, "api.hostip.info");
+var host = "ipinfodb.com",
+	server = http.createClient(80, host);
 
 http.createServer(function (request, response) {
   response.sendHeader('Content-Type: image/gif');
@@ -14,7 +15,7 @@ http.createServer(function (request, response) {
 }).listen(8080);
 
 function log(ip, browser) {
-  var req = hostip.request("GET", "/get_html.php?ip=" + ip, {host: "api.hostip.info"});
+  var req = server.request("GET", "/ip_query.php?ip=" + ip + "&timezone=false", {host: host});
   req.addListener('response', function (resp) {
     var buffer = "";
     resp.addListener("data", function (chunk) {
@@ -22,13 +23,12 @@ function log(ip, browser) {
     });
     resp.addListener("end", function () {
       if (resp.statusCode < 300) {
-        var cc = buffer.split('\n');
-        var country = /Country\:\s(.*)\((\w\w)\)/g.exec(cc[0]);
-        var city = /City\:\s(.*)/g.exec(cc[1]);
-        var obj = { date: new Date(), ip: ip, country: country[1].trim(), code: country[2].trim(), city: city[1].trim(), browser: browser }
-        fs.readFile(file, function(err, data) {
-          if (!err) fs.writeFile(file, JSON.stringify(obj) + "\n" + data);
-        });
+		var country = /<CountryCode>(\w\w)<\/CountryCode>/.exec(buffer),
+			city = /<City>(.*)<\/City>/.exec(buffer),
+			obj = { date: new Date(), ip: ip, country: country ? country[1] : "XX", city: city ? city[1] : "Unknown", browser: browser };
+		fs.open(file, 'a+', 0666, function(err, fd) {
+			if (!err) fs.write(fd, JSON.stringify(obj) + '\n', null, 'utf8');
+		})
       }
     });
   });
